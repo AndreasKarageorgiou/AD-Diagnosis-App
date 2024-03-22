@@ -1,5 +1,6 @@
 # Load the trained Random Forest model
 import joblib
+import pandas as pd
 
 
 model = joblib.load('random_forest_model.pkl')
@@ -14,6 +15,8 @@ questions = {
     'AgeAtExamination': 'Enter Age at Examination: ',
     'PTGENDER': 'Enter PTGENDER (M/F): '
 }
+# Load dataset
+df = pd.read_csv("AIBL.csv")
 
 # Get user input
 user_data = {}
