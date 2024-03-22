@@ -1,0 +1,3 @@
+,Feature,Mean Alzheimer,Mean Non-Alzheimer,t-test p-value,Pearson Correlation Coefficient,Probability Alzheimer,Probability Non-Alzheimer
+0,Age at Examination,,73.37682926829268,,-0.13800794265660488,0,1.0
+1,MMSE,,27.475609756097562,,-0.13800794265660488,0,1.0
