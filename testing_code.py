@@ -1,35 +1,62 @@
-import time
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
+import time
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.naive_bayes import GaussianNB
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, HistGradientBoostingClassifier
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
 
 # Load dataset
 df = pd.read_csv("AIBL.csv")
 
-# Create "Label" column
-df["Label"] = df["DXAD"].apply(lambda x: 1 if x == "Alzheimer" else 0)
+# Define diagnosis features
+diagnosis_features = ['DXNORM', 'DXMCI', 'DXAD']
+
+
+def create_DXTYPE(DXNORM, DXMCI, DXAD):
+    if DXNORM == 1:
+        return 0  # Represent "normal" 
+    elif DXMCI == 1:
+        return 1  # Represent "MCI"
+    elif DXAD == 1:
+        return 2  # Represent "AD"
+    else:
+        return -1  # Handle the case where none of the conditions are satisfied
+
+# Create DXPOS before removing other diagnosis features
+df['DXTYPE'] = df.apply(lambda row: create_DXTYPE(row['DXNORM'], row['DXMCI'], row['DXAD']), axis=1)
+
+
+
+# Get value counts for 'DXTYPE'
+dxtypes_counts = df['DXTYPE'].value_counts()
+
+# Print the result
+print("Value Counts for DXTYPE:")
+print(dxtypes_counts)
+
+# Now remove the unnecessary diagnosis features:
+df.drop(diagnosis_features, axis=1, inplace=True)
 
 # Calculate age
-df["AgeAtExamination"] = df["Examyear"] - df["PTDOBYear"]
+df["ExamAge"] = df["Examyear"] - df["PTDOBYear"]
 
 # Data Preprocessing
 df.dropna(inplace=True)
 
 # Define your updated feature list
-desired_features = ['CDGLOBAL', 'MMSCORE', 'DXMCI', 'LDELTOTAL', 'LIMMTOTAL', 
-'AgeAtExamination', 'PTGENDER']
+desired_features = ['APGEN1','APGEN2','CDGLOBAL','AXT117','BAT126','HMT3','HMT7' ,
+'HMT13','HMT40','HMT100','HMT102','RCT6','RCT11','RCT20','RCT392', 'MHPSYCH',
+'MH2NEURL','MH4CARD','MH6HEPAT','MH8MUSCL','MH9ENDO',
+'MH10GAST','MH12RENA','MH16SMOK','MH17MALI','MMSCORE','LIMMTOTAL', 
+'LDELTOTAL' ,'PTGENDER',"ExamAge", 'APTyear']
 
 # Extract features and labels
 X = df[desired_features]
-y = df['DXAD']  
+y = df['DXTYPE']
 
 # Train-Test Split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -39,48 +66,32 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-# Create models
-model_regularized = LogisticRegression(max_iter=10000, C=0.1)
-svm_model = SVC()
-random_forest_model = RandomForestClassifier()
-gradient_boosting_model = GradientBoostingClassifier()
-decision_tree_model = DecisionTreeClassifier()
-naive_bayes_model = GaussianNB()
+# Create classifiers
+classifiers = {
+    "Random Forest": RandomForestClassifier(),
+    "Gradient Boosting": GradientBoostingClassifier(),
+    "AdaBoost": AdaBoostClassifier(estimator=DecisionTreeClassifier(max_depth=3)), 
+    "HistGradientBoosting": HistGradientBoostingClassifier(), # Relatively new model
+    "KNN": KNeighborsClassifier(),
+    "Logistic Regression": LogisticRegression()
+}
 
-# Training and Evaluation Loop
-models = [
-    ("Regularized Logistic Regression", LogisticRegression(max_iter=10000, C=0.1)),
-    ("SVM", SVC()),
-    ("Random Forest", RandomForestClassifier()),
-    ("Gradient Boosting", GradientBoostingClassifier()),
-    ("Decision Tree", DecisionTreeClassifier()),
-    ("Naive Bayes", GaussianNB()),
-    ("KNN", KNeighborsClassifier(n_neighbors=10)),
-]
-
-# Define 10-fold stratified cross-validation
-cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
-
-# Loop through models and perform cross-validation
-for name, model in models:
+# Perform 10-fold cross-validation for each classifier
+cv_results = {}
+for name, clf in classifiers.items():
     start_time = time.time()
-
-    # Calculate cross-validation scores
-    cv_results = cross_val_score(model, X, y, cv=cv, scoring='accuracy') 
-
+    scores = cross_val_score(clf, X_train_scaled, y_train, cv=10)
     end_time = time.time()
+    cv_results[name] = {
+        "Mean Accuracy": scores.mean(),
+        "Standard Deviation": scores.std(),
+        "Cross-Validation Time": end_time - start_time
+    }
 
-    # Print results for the model
-    print(f"\nModel: {name}")
-    print(f"Training Time: {end_time - start_time:.4f} seconds (Overall)")
-    print("Cross-Validation Accuracy Scores:", cv_results)
-    print(f"Mean Accuracy: {cv_results.mean():.4f}")
-    print(f"Standard Deviation: {cv_results.std():.4f}") 
-
-import joblib
-
-# Train your random forest model
-random_forest_model.fit(X_train, y_train)
-
-# Save the trained model to a file
-joblib.dump(random_forest_model, 'random_forest_model.pkl')
+# Print cross-validation results
+for name, result in cv_results.items():
+    print(f"{name} Cross-Validation Results:")
+    print(f"Mean Accuracy: {result['Mean Accuracy']:.3f}")
+    print(f"Standard Deviation: {result['Standard Deviation']:.3f}")
+    print(f"Cross-Validation Time: {result['Cross-Validation Time']:.4f} seconds")
+    print("=" * 50)
