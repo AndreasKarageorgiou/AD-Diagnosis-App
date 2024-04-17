@@ -18,13 +18,13 @@ diagnosis_features = ['DXNORM', 'DXMCI', 'DXAD']
 
 def create_DXTYPE(DXNORM, DXMCI, DXAD):
     if DXNORM == 1:
-        return 0  # Represent "normal" 
+        return 0   
     elif DXMCI == 1:
-        return 1  # Represent "MCI"
+        return 1  
     elif DXAD == 1:
-        return 2  # Represent "AD"
+        return 2  
     else:
-        return -1  # Handle the case where none of the conditions are satisfied
+        return -1  
 
 # Create DXPOS before removing other diagnosis features
 df['DXTYPE'] = df.apply(lambda row: create_DXTYPE(row['DXNORM'], row['DXMCI'], row['DXAD']), axis=1)
@@ -48,11 +48,9 @@ df["ExamAge"] = df["Examyear"] - df["PTDOBYear"]
 df.dropna(inplace=True)
 
 # Define your updated feature list
-desired_features = ['APGEN1','APGEN2','CDGLOBAL','AXT117','BAT126','HMT3','HMT7' ,
-'HMT13','HMT40','HMT100','HMT102','RCT6','RCT11','RCT20','RCT392', 'MHPSYCH',
-'MH2NEURL','MH4CARD','MH6HEPAT','MH8MUSCL','MH9ENDO',
-'MH10GAST','MH12RENA','MH16SMOK','MH17MALI','MMSCORE','LIMMTOTAL', 
-'LDELTOTAL' ,'PTGENDER',"ExamAge", 'APTyear']
+desired_features = ['CDGLOBAL','LDELTOTAL','MMSCORE','LIMMTOTAL','RCT20','ExamAge','BAT126',
+'HMT13','AXT117','HMT7','HMT100','RCT11','HMT3','RCT6','RCT392']
+
 
 # Extract features and labels
 X = df[desired_features]

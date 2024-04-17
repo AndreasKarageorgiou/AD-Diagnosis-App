@@ -8,9 +8,9 @@ import pandas as pd
 df = pd.read_csv("AIBL.csv")
 
 # Define diagnosis features
-diagnosis_features = ['DXNORM', 'DXMCI', 'DXAD']
+diagnosis_features = ['DXNORM', 'DXMCI', 'DXAD', 'DXCURREN']
 
-def create_DXTYPE(DXNORM, DXMCI, DXAD):
+def create_DXTYPE(DXNORM, DXMCI, DXAD, DXCURREN):
     if DXNORM == 1:
         return 0  # Represent "normal" 
     elif DXMCI == 1:
@@ -18,10 +18,9 @@ def create_DXTYPE(DXNORM, DXMCI, DXAD):
     elif DXAD == 1:
         return 2  # Represent "AD"
     else:
-        return -1  # Handle the case where none of the conditions are satisfied
+        return 3  # Handle the case where none of the conditions are satisfied
 
-# Create DXPOS before removing other diagnosis features
-df['DXTYPE'] = df.apply(lambda row: create_DXTYPE(row['DXNORM'], row['DXMCI'], row['DXAD']), axis=1)
+df['DXTYPE'] = df.apply(lambda row: create_DXTYPE(row['DXNORM'], row['DXMCI'], row['DXAD'], row['DXCURREN']), axis=1)
 
 # Now remove the unnecessary diagnosis features:
 df.drop(diagnosis_features, axis=1, inplace=True)

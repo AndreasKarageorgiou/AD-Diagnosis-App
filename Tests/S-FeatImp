@@ -1,0 +1,118 @@
+import pandas as pd
+import numpy as np
+import time
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, HistGradientBoostingClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import classification_report
+from sklearn.svm import SVC
+from xgboost import XGBClassifier
+
+# Load dataset
+df = pd.read_csv("AIBL.csv")
+
+# Define diagnosis features
+diagnosis_features = ['DXNORM', 'DXMCI', 'DXAD']
+
+# Function to create DXTYPE
+def create_DXTYPE(DXNORM, DXMCI, DXAD):
+    if DXNORM == 1:
+        return 0   
+    elif DXMCI == 1:
+        return 1  
+    elif DXAD == 1:
+        return 2  
+    else:
+        return -1  
+
+# Create DXPOS before removing other diagnosis features
+df['DXTYPE'] = df.apply(lambda row: create_DXTYPE(row['DXNORM'], row['DXMCI'], row['DXAD']), axis=1)
+
+# Now remove the unnecessary diagnosis features:
+df.drop(diagnosis_features, axis=1, inplace=True)
+
+# Calculate age
+df["ExamAge"] = df["Examyear"] - df["PTDOBYear"]
+
+# Data Preprocessing
+df.dropna(inplace=True)
+
+# Define your updated feature list
+desired_features = ['CDGLOBAL','LDELTOTAL','MMSCORE','LIMMTOTAL','RCT20','ExamAge','BAT126',
+'HMT13','AXT117','HMT7','HMT100','RCT11','HMT3','RCT6','RCT392']
+
+# Extract features and labels
+X = df[desired_features]
+y = df['DXTYPE']
+
+# Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Feature Scaling
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Create classifiers
+classifiers = {
+    "Random Forest": RandomForestClassifier(),
+    "Gradient Boosting": GradientBoostingClassifier(),
+    "AdaBoost": AdaBoostClassifier(estimator=DecisionTreeClassifier(max_depth=3)), 
+    "HistGradientBoosting": HistGradientBoostingClassifier(), # Relatively new model
+    "KNN": KNeighborsClassifier(),
+    "Logistic Regression": LogisticRegression(),
+    "XGBoost": XGBClassifier(),
+    "Support Vector Machine": SVC()
+}
+
+# Initialize lists to store results
+mean_accuracies = []
+std_deviations = []
+cv_times = []
+precisions = []
+recalls = []
+f1_scores = []
+
+# Initialize a dictionary to store results for each classifier
+results = {}
+
+# Perform 10-fold cross-validation for each classifier
+for name, clf in classifiers.items():
+    start_time = time.time()
+    
+    # Perform cross-validation
+    scores = cross_val_score(clf, X_train_scaled, y_train, cv=10)
+    
+    # Fit the model to get predictions for classification report
+    clf.fit(X_train_scaled, y_train)
+    y_pred = clf.predict(X_test_scaled)
+    
+    # Calculate classification report metrics
+    report = classification_report(y_test, y_pred, output_dict=True)
+    
+    # Store results in the dictionary
+    results[name] = {
+        "Mean Accuracy": scores.mean(),
+        "Standard Deviation": scores.std(),
+        "Cross-Validation Time": time.time() - start_time,
+        "Precision": report['weighted avg']['precision'],
+        "Recall": report['weighted avg']['recall'],
+        "F1 Score": report['weighted avg']['f1-score'],
+        "Classification Report": classification_report(y_test, y_pred)
+    }
+
+# Print results for each classifier
+for name, result in results.items():
+    print(f"{name} Results:")
+    print(f"Mean Accuracy: {result['Mean Accuracy']:.3f}")
+    print(f"Standard Deviation: {result['Standard Deviation']:.3f}")
+    print(f"Cross-Validation Time: {result['Cross-Validation Time']:.4f} seconds")
+    print(f"Precision: {result['Precision']:.3f}")
+    print(f"Recall: {result['Recall']:.3f}")
+    print(f"F1 Score: {result['F1 Score']:.3f}")
+    print("Classification Report:")
+    print(result['Classification Report'])
+    print("=" * 50)
