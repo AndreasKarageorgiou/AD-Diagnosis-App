@@ -4,13 +4,13 @@ import joblib
 import pandas as pd
 from xgboost import XGBClassifier
 from sklearn.preprocessing import StandardScaler
-from datetime import datetime
+import numpy as np
 
 
 
-# Load the trained XGBoost model
-model_file = "best_xgb_model.pkl"
-model = joblib.load(model_file)
+# Load the saved model and label encoder
+pipeline = joblib.load('model.joblib')
+encoder = joblib.load('label_encoder.joblib')
 
 
 # Define the list of desired features
@@ -21,40 +21,7 @@ desired_features = ['APGEN1', 'APGEN2', 'CDGLOBAL', 'AXT117', 'BAT126', 'HMT3', 
 'MMSCORE', 'LIMMTOTAL', 'LDELTOTAL', 'PTGENDER', 'ExamAge', 'APTyear']
 
 
-page_bg_img = f"""
-<style>
-[data-testid="stAppViewContainer"] > .main {{
-background-image: url("https://d2jx2rerrg6sh3.cloudfront.net/images/news/ImageForNews_760599_1696326718990377.jpg");
-background-size: cover;
-background-position: top right;
-background-repeat: no-repeat;
-background-attachment: local;
-}}
 
-
-[data-testid="stHeader"] {{
-background: rgba(0,0,0,0);
-}}
-
-[data-testid="stToolbar"] {{
-right: 2rem;
-}}
-</style>
-"""
-
-st.markdown(page_bg_img, unsafe_allow_html=True)
-st.sidebar.subheader("Alzheimer's disease presents a pressing challenge")
-st.sidebar.subheader("A WebApp Created By Andreas Karageorgiou")
-
-def main():
-    st.title("Alzheimer's Disease Diagnosis Application")
-    st.sidebar.header("App Navigation")
-    page = st.sidebar.radio("Go to", ["Home", "Questionnaire"])
-
-    if page == "Home":
-        display_home_page()
-    elif page == "Questionnaire":
-        display_questionnaire_page()
 
 def display_home_page():
     st.subheader("Welcome to the Home Page")
@@ -73,14 +40,61 @@ def display_home_page():
     # Add a button to initiate the questionnaire
     if st.button("Let's get to the questionnaire"):
         display_questionnaire_page()
+        return  # Exit the function to prevent further execution
+
+def main():
+    st.title("Alzheimer's Disease Diagnosis Application")
+    page_bg_img = f"""
+        <style>
+        [data-testid="stAppViewContainer"] > .main {{
+        background-image: url("https://d2jx2rerrg6sh3.cloudfront.net/images/news/ImageForNews_760599_1696326718990377.jpg");
+        background-size: cover;
+        background-position: top right;
+        background-repeat: no-repeat;
+        background-attachment: local;
+        }}
+
+        [data-testid="stHeader"] {{
+        background: rgba(0,0,0,0);
+        }}
+
+        [data-testid="stToolbar"] {{
+        right: 2rem;
+        }}
+        </style>
+        """
+    st.markdown(page_bg_img, unsafe_allow_html=True)
+
+    st.sidebar.subheader("Alzheimer's disease presents a pressing challenge")
+    st.sidebar.subheader("A WebApp Created By Andreas Karageorgiou")
+    st.sidebar.header("App Navigation")
+    page = st.sidebar.radio("Go to", ["Home", "Questionnaire"])
+
+    if page == "Home":
+        display_home_page()
+    elif page == "Questionnaire":
+        display_questionnaire_page()
+
+def perform_prediction(inputs):
+    # Scale the inputs using the same scaler used during training
+    inputs_scaled = pipeline['scaler'].transform([inputs])
+    
+    # Predict using the model in the pipeline
+    prediction = pipeline['classifier'].predict(inputs_scaled)
+    prediction_proba = pipeline['classifier'].predict_proba(inputs_scaled)
+
+    # Decode the prediction into labels
+    prediction_label = encoder.inverse_transform(prediction)[0]
+
+    # Get the probability of the predicted class
+    max_proba = np.max(prediction_proba)
+    
+    return prediction_label, max_proba
+    
 
 def display_questionnaire_page():
     st.subheader("Questionnaire")
-    st.write("This is the questionnaire page.")
-    st.write("Your questionnaire code goes here.")
-
-def display_questionnaire_page():
-        
+      
     st.header("Demographics")
     st.write("__________________________")
     st.write("")
@@ -89,14 +103,29 @@ def display_questionnaire_page():
     st.write("1. Patients Full Name")
     patient_name = st.text_input("Enter patient's full name:", key="patient_name")
 
+    # Double line separator
+    st.write("")
+    st.write("__________________________")
+    st.write("")
+
     # Question 2: Patients Nationality
     st.write("2. Patients Nationality")
     patient_nationality = st.text_input("Enter patient's nationality:", key="patient_nationality")
 
+    # Double line separator
+    st.write("")
+    st.write("__________________________")
+    st.write("")
+
     # Question 3: Patients Gender
     st.write("3. Patients Gender")
     patient_gender = st.selectbox("Select patient's gender:", options=["Male", "Female", "Other"], key="patient_gender")
-
+    
+    # Double line separator
+    st.write("")
+    st.write("__________________________")
+    st.write("")
+    
     # Question 4: Patients Age
     st.write("4. Patients Age")
     patient_age = st.number_input("Enter patient's age:", min_value=50, max_value=110, key="patient_age")
@@ -364,7 +393,10 @@ def display_questionnaire_page():
     # Question 32: RCT6 - Urea Nitrogen
     st.write("32. RCT6 - Urea Nitrogen")
     rct6_option = st.slider("Select a value:", min_value=1682, max_value=115334, key="rct6")
-    pass
+    
+
+    submit_button = st.form_submit_button(label='Predict')
+        
 
    
 

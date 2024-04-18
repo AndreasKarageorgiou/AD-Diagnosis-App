@@ -48,7 +48,7 @@ X = df[desired_features]
 y = df['DXTYPE']
 
 # Train-Test Split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
 
 # Feature Scaling
 scaler = StandardScaler()
@@ -85,3 +85,4 @@ classification_rep = classification_report(y_test, y_pred)
 # Print classification report
 print("Classification Report for XGBoost:")
 print(classification_rep)
+
