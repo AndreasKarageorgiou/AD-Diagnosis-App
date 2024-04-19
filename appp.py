@@ -4,6 +4,7 @@ import numpy as np
 import joblib
 import time
 import base64
+import plotly.express as px
 
 st.set_page_config(page_title="AD Diagnosis", page_icon="Images/logo1.jpg")  
 
@@ -12,7 +13,6 @@ def get_img_as_base64(file):
     with open(file, "rb") as f:
         data = f.read()
     return base64.b64encode(data).decode()
-
 
 img = get_img_as_base64("Images/iStock-Credit-Nobi_Prizue-1200-628-5-17-23.jpg")
 img1 = get_img_as_base64("Images/ImageForNews_760599_1696326718990377.webp")
@@ -28,10 +28,10 @@ background-attachment: local;
 }}
 
 [data-testid="stSidebar"] > div:first-child {{
-background-image: url("data:image/png;base64,{img1}");
-background-position: top-right; 
+background-image: url("data:image/png;base64,{img}");
+background-position: cover; 
 background-repeat: repeat;
-background-attachment: local;
+background-attachment: fixed;
 }}
 
 [data-testid="stHeader"] {{
@@ -46,83 +46,31 @@ right: 2rem;
 
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
-# Function to load the model, scaler, and label encoder
-def load_resources():
-    model = joblib.load("Model/model.joblib")
-    scaler = joblib.load("Model/scaler.joblib")
-    encoder = joblib.load('Model/label_encoder.joblib')
-    return model, scaler, encoder
-
-# Function to prepare user input for prediction
-def get_clean_data():
-    df = pd.read_csv("AIBL.csv")
-    # Apply any necessary transformations as during training
-    diagnosis_features = ['DXNORM', 'DXMCI', 'DXAD']
-    def create_DXTYPE(DXNORM, DXMCI, DXAD):
-        if DXNORM == 1:
-            return 0
-        elif DXMCI == 1:
-            return 1
-        elif DXAD == 1:
-            return 2
-        else:
-            return -1
-
-    # Apply the function to create a target variable 'DXTYPE'
-    df['DXTYPE'] = df.apply(lambda row: create_DXTYPE(row['DXNORM'], row['DXMCI'], row['DXAD']), axis=1)
-
-    # Calculate age before dropping 'Examyear' and 'PTDOBYear'
-    if 'Examyear' in df.columns and 'PTDOBYear' in df.columns:
-        df["ExamAge"] = df["Examyear"] - df["PTDOBYear"]    
-
-    # Columns to drop including the 'APTyear', 'Examyear', 'PTDOBYear', and 'DXCURREN'
-    columns_to_drop = diagnosis_features + ['APTyear', 'Examyear', 'PTDOBYear', 'DXCURREN']
-    df.drop(columns_to_drop, axis=1, inplace=True)
-    
-    return df
+# Initialize a session state to store user inputs
+if 'input_data' not in st.session_state:
+    st.session_state.input_data = pd.DataFrame()
 
 def prepare_user_input(input_dict):
-    # Ensure the features are in the exact order and naming as during model training
     columns_order = [
-        'APGEN1', 'APGEN2', 'CDGLOBAL', 'AXT117', 'BAT126', 'HMT3', 'HMT7',
-        'HMT13', 'HMT40', 'HMT100', 'HMT102', 'RCT6', 'RCT11', 'RCT20', 'RCT392',
-        'MHPSYCH', 'MH2NEURL', 'MH4CARD', 'MH6HEPAT', 'MH8MUSCL', 'MH9ENDO',
-        'MH10GAST', 'MH12RENA', 'MH16SMOK', 'MH17MALI', 'MMSCORE', 'LIMMTOTAL',
-        'LDELTOTAL', 'PTGENDER', 'ExamAge']
-    # Create a DataFrame ensuring the columns are correctly ordered
+        'PTGENDER', 'ExamAge', 'MH16SMOK', 'MH2NEURL', 'MH8MUSCL', 'MHPSYCH', 'MH10GAST',
+        'MH4CARD', 'MH9ENDO', 'MH17MALI', 'MH6HEPAT', 'MH12RENA', 'APGEN1', 'APGEN2', 
+        'CDGLOBAL', 'MMSCORE', 'LIMMTOTAL', 'LDELTOTAL', 'AXT117', 'BAT126', 'HMT3', 
+        'HMT7', 'HMT13', 'HMT40', 'HMT100', 'HMT102', 'RCT6', 'RCT11', 'RCT20', 'RCT392'
+    ]
     input_df = pd.DataFrame([input_dict], columns=columns_order)
     return input_df.astype(float)
 
-# Function to perform prediction and display results
-def perform_prediction(input_df, model, scaler, encoder):
-    # Scale the input features as during training
-    scaled_features = scaler.transform(input_df)
-    # Predict
-    predictions = model.predict(scaled_features)
-    probabilities = model.predict_proba(scaled_features)[0]
-    # Decode prediction
-    prediction_label = encoder.inverse_transform([predictions])[0]
-    # Display results
-    st.subheader("Diagnosis Result")
-    st.write(f"The prediction is: {prediction_label}")
-    st.write("Prediction probabilities:")
-    for i, label in enumerate(encoder.classes_):
-        st.write(f"{label}: {probabilities[i]:.2f}")
+def add_input_to_data(input_df):
+    st.session_state.input_data = pd.concat([st.session_state.input_data, input_df], ignore_index=True)
 
-
-
-# Main function to handle the Streamlit app layout
 def main():
     st.title("Alzheimer's Disease Diagnosis Application")
-    
-    model, scaler, encoder = load_resources()
 
-    # Adding a sidebar for user input
     st.sidebar.header("Input Patient Information")
     st.sidebar.text_input("Patient's Name")
-
     st.sidebar.text_input("Patient's Nationality")
 
+    # Collect input data
     input_dict = {
         'PTGENDER': st.sidebar.selectbox("Select patient's gender:", [1, 2]),
         'ExamAge': st.sidebar.number_input("Enter patient's age:", min_value=55, max_value=96),
@@ -157,16 +105,14 @@ def main():
     }
     input_df = prepare_user_input(input_dict)
 
-    if st.sidebar.button("Predict"):
-        progress_bar = st.progress(0)
-        for perc_completed in range(100):
-            time.sleep(0.05)
-            progress_bar.progress(perc_completed+1)
+    if st.sidebar.button("Add Data"):
+        add_input_to_data(input_df)
+        st.success("Data added!")
 
-        st.success("Your data have been uploaded")  
-
-        with st.expander("Click Here to See your Results"):
-            perform_prediction(input_df, model, scaler, encoder)
+    if st.sidebar.button("Visualize Data"):
+        # Visualize with a parallel coordinates plot
+        fig = px.parallel_coordinates(st.session_state.input_data, color="PTGENDER", labels={col: col for col in st.session_state.input_data.columns})
+        st.plotly_chart(fig)
 
 if __name__ == '__main__':
     main()

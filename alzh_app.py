@@ -2,25 +2,112 @@ import streamlit as st
 import plotly.express as px
 import joblib
 import pandas as pd
+import numpy as np
+import base64
 from xgboost import XGBClassifier
 from sklearn.preprocessing import StandardScaler
-import numpy as np
+
+st.set_page_config(page_title="AD Diagnosis", page_icon="Images/logo1.jpg")  
+@st.cache_data
+def get_img_as_base64(file):
+    with open(file, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+img = get_img_as_base64("Images/iStock-Credit-Nobi_Prizue-1200-628-5-17-23.jpg")
+img1 = get_img_as_base64("Images/ImageForNews_760599_1696326718990377.webp")
+
+page_bg_img = f"""
+<style>
+[data-testid="stAppViewContainer"] > .main {{
+background-image: url("data:image/png;base64,{img1}");
+background-size: cover;
+background-position: center; 
+background-repeat: no-repeat;
+background-attachment: local;
+}}
+
+[data-testid="stSidebar"] > div:first-child {{
+background-image: url("data:image/png;base64,{img1}");
+background-position: top-right; 
+background-repeat: repeat;
+background-attachment: local;
+}}
+
+[data-testid="stHeader"] {{
+background: rgba(0,0,0,0);
+}}
+
+[data-testid="stToolbar"] {{
+right: 2rem;
+}}
+</style>
+"""
+
+st.markdown(page_bg_img, unsafe_allow_html=True)
 
 
+def load_resources():
+    model = joblib.load("Model/model.joblib")
+    scaler = joblib.load("Model/scaler.joblib")
+    encoder = joblib.load('Model/label_encoder.joblib')
+    return model, scaler, encoder
 
-# Load the saved model and label encoder
-pipeline = joblib.load('model.joblib')
-encoder = joblib.load('label_encoder.joblib')
+# Function to prepare user input for prediction
+def get_clean_data():
+    df = pd.read_csv("AIBL.csv")
+    # Apply any necessary transformations as during training
+    diagnosis_features = ['DXNORM', 'DXMCI', 'DXAD']
+    def create_DXTYPE(DXNORM, DXMCI, DXAD):
+        if DXNORM == 1:
+            return 0
+        elif DXMCI == 1:
+            return 1
+        elif DXAD == 1:
+            return 2
+        else:
+            return -1
 
+    # Apply the function to create a target variable 'DXTYPE'
+    df['DXTYPE'] = df.apply(lambda row: create_DXTYPE(row['DXNORM'], row['DXMCI'], row['DXAD']), axis=1)
 
-# Define the list of desired features
-desired_features = ['APGEN1', 'APGEN2', 'CDGLOBAL', 'AXT117', 'BAT126', 'HMT3', 'HMT7',
-'HMT13', 'HMT40', 'HMT100', 'HMT102', 'RCT6', 'RCT11', 'RCT20', 
-'RCT392', 'MHPSYCH', 'MH2NEURL', 'MH4CARD', 'MH6HEPAT', 'MH8MUSCL',
-'MH9ENDO', 'MH10GAST', 'MH12RENA', 'MH16SMOK', 'MH17MALI', 
-'MMSCORE', 'LIMMTOTAL', 'LDELTOTAL', 'PTGENDER', 'ExamAge', 'APTyear']
+    # Calculate age before dropping 'Examyear' and 'PTDOBYear'
+    if 'Examyear' in df.columns and 'PTDOBYear' in df.columns:
+        df["ExamAge"] = df["Examyear"] - df["PTDOBYear"]    
 
+    # Columns to drop including the 'APTyear', 'Examyear', 'PTDOBYear', and 'DXCURREN'
+    columns_to_drop = diagnosis_features + ['APTyear', 'Examyear', 'PTDOBYear', 'DXCURREN']
+    df.drop(columns_to_drop, axis=1, inplace=True)
+    
+    return df
 
+def prepare_user_input(input_dict):
+    # Ensure the features are in the exact order and naming as during model training
+    columns_order = [
+        'APGEN1', 'APGEN2', 'CDGLOBAL', 'AXT117', 'BAT126', 'HMT3', 'HMT7',
+        'HMT13', 'HMT40', 'HMT100', 'HMT102', 'RCT6', 'RCT11', 'RCT20', 'RCT392',
+        'MHPSYCH', 'MH2NEURL', 'MH4CARD', 'MH6HEPAT', 'MH8MUSCL', 'MH9ENDO',
+        'MH10GAST', 'MH12RENA', 'MH16SMOK', 'MH17MALI', 'MMSCORE', 'LIMMTOTAL',
+        'LDELTOTAL', 'PTGENDER', 'ExamAge']
+    # Create a DataFrame ensuring the columns are correctly ordered
+    input_df = pd.DataFrame([input_dict], columns=columns_order)
+    return input_df.astype(float)
+
+# Function to perform prediction and display results
+def perform_prediction(input_df, model, scaler, encoder):
+    # Scale the input features as during training
+    scaled_features = scaler.transform(input_df)
+    # Predict
+    predictions = model.predict(scaled_features)
+    probabilities = model.predict_proba(scaled_features)[0]
+    # Decode prediction
+    prediction_label = encoder.inverse_transform([predictions])[0]
+    # Display results
+    st.subheader("Diagnosis Result")
+    st.write(f"The prediction is: {prediction_label}")
+    st.write("Prediction probabilities:")
+    for i, label in enumerate(encoder.classes_):
+        st.write(f"{label}: {probabilities[i]:.2f}")
 
 
 def display_home_page():
@@ -42,54 +129,26 @@ def display_home_page():
         display_questionnaire_page()
         return  # Exit the function to prevent further execution
 
+def display_about_page():
+    st.title("About Us")
+
 def main():
-    st.title("Alzheimer's Disease Diagnosis Application")
-    page_bg_img = f"""
-        <style>
-        [data-testid="stAppViewContainer"] > .main {{
-        background-image: url("https://d2jx2rerrg6sh3.cloudfront.net/images/news/ImageForNews_760599_1696326718990377.jpg");
-        background-size: cover;
-        background-position: top right;
-        background-repeat: no-repeat;
-        background-attachment: local;
-        }}
-
-        [data-testid="stHeader"] {{
-        background: rgba(0,0,0,0);
-        }}
-
-        [data-testid="stToolbar"] {{
-        right: 2rem;
-        }}
-        </style>
-        """
-    st.markdown(page_bg_img, unsafe_allow_html=True)
+    st.title("Alzheimer's Disease Diagnosis Application, Powered by the Ionian University")
+    
 
     st.sidebar.subheader("Alzheimer's disease presents a pressing challenge")
-    st.sidebar.subheader("A WebApp Created By Andreas Karageorgiou")
     st.sidebar.header("App Navigation")
-    page = st.sidebar.radio("Go to", ["Home", "Questionnaire"])
+    page = st.sidebar.radio("Go to", ["Home", "Questionnaire", "About Us"])
 
     if page == "Home":
         display_home_page()
     elif page == "Questionnaire":
         display_questionnaire_page()
+    elif page == "About Us":
+        display_about_page()
 
-def perform_prediction(inputs):
-    # Scale the inputs using the same scaler used during training
-    inputs_scaled = pipeline['scaler'].transform([inputs])
-    
-    # Predict using the model in the pipeline
-    prediction = pipeline['classifier'].predict(inputs_scaled)
-    prediction_proba = pipeline['classifier'].predict_proba(inputs_scaled)
+    st.sidebar.subheader("A WebApp Created By Andreas Karageorgiou")
 
-    # Decode the prediction into labels
-    prediction_label = encoder.inverse_transform(prediction)[0]
-
-    # Get the probability of the predicted class
-    max_proba = np.max(prediction_proba)
-    
-    return prediction_label, max_proba
     
 
 def display_questionnaire_page():
