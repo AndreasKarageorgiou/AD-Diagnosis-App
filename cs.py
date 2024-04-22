@@ -164,7 +164,7 @@ def display_about_page():
     col1, col2, = st.columns(2)
     with col1:
         st.header("Meet The Creator")
-        st.image("Images\CV photo.jpg", caption="Founder")
+        st.image("Images/CV photo.jpg", caption="Founder")
         st.subheader("ANDREAS KARAGEORGIOU")
         st.text("CEO")
         st.write("Student at the Ionian University .")
