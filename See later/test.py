@@ -1,39 +1,60 @@
 import pandas as pd
-import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Φόρτωση dataset
-df = pd.read_csv("AIBL.csv")
+def get_clean_data():
+    df = pd.read_csv("AIBL.csv")
+  
+    # Define diagnosis features and create a target variable
+    diagnosis_features = ['DXNORM', 'DXMCI', 'DXAD']
+    def create_DXTYPE(DXNORM, DXMCI, DXAD):
+        if DXNORM == 1:
+            return 0
+        elif DXMCI == 1:
+            return 1
+        elif DXAD == 1:
+            return 2
+        else:
+            return -1
 
-# Δημιουργία στήλης "Label"
-df["Label"] = df["DXAD"].apply(lambda x: 1 if x == "Alzheimer" else 0)
+    # Apply the function to create a target variable 'DXTYPE'
+    df['DXTYPE'] = df.apply(lambda row: create_DXTYPE(row['DXNORM'], row['DXMCI'], row['DXAD']), axis=1)
 
-# Υπολογισμός ηλικίας
-df["AgeAtExamination"] = df["Examyear"] - df["PTDOBYear"]
+    # Calculate age before dropping 'Examyear' and 'PTDOBYear'
+    if 'Examyear' in df.columns and 'PTDOBYear' in df.columns:
+        df["ExamAge"] = df["Examyear"] - df["PTDOBYear"]    
 
-# Οπτικοποίηση δεδομένων με ιστογράμματα
+    # Columns to drop including the 'APTyear', 'Examyear', 'PTDOBYear', and 'DXCURREN'
+    columns_to_drop = diagnosis_features + ['APTyear', 'Examyear', 'PTDOBYear', 'DXCURREN']
+    df.drop(columns_to_drop, axis=1, inplace=True)
+    
+    return df
+
+df = get_clean_data()
+
+# Visualizing data with histograms
 plt.figure(figsize=(12, 6))
 
-# Ιστόγραμμα για την ηλικία εξέτασης
+# Histogram for examination age
 plt.subplot(1, 2, 1)
-sns.histplot(data=df, x="AgeAtExamination", hue="Label", kde=True, bins=30)
-plt.title("Ιστόγραμμα Ηλικίας Εξέτασης")
+sns.histplot(data=df, x="ExamAge", kde=True, bins=30)
+plt.title("Histogram of Examination Age")
 
-# Ιστόγραμμα για το MMSE
+# Assuming MMSCORE exists and is correctly named
 plt.subplot(1, 2, 2)
-sns.histplot(data=df, x="MMSCORE", hue="Label", kde=True, bins=30)
-plt.title("Ιστόγραμμα MMSE")
+sns.histplot(data=df, x="MMSCORE", kde=True, bins=30)
+plt.title("Histogram of MMSCORE")
 
 plt.show()
 
-# Γραφηματική αναπαράσταση δεδομένων
+# Graphical representation of data
 plt.figure(figsize=(10, 6))
 
-# Scatter plot για την σχέση ηλικίας και MMSE
-sns.scatterplot(data=df, x="AgeAtExamination", y="MMSCORE", hue="Label", alpha=0.7)
-plt.title("Scatter Plot: Σχέση Ηλικίας και MMSE")
-plt.xlabel("Ηλικία εξέτασης")
+# Scatter plot for the relationship between age and MMSE
+# Assuming MMSCORE is the equivalent to MMSE and 'AgeAtExamination' should be 'ExamAge'
+sns.scatterplot(data=df, x="ExamAge", y="MMSCORE", alpha=0.7)
+plt.title("Scatter Plot: Relationship Between Age and MMSE")
+plt.xlabel("Age at Examination")
 plt.ylabel("MMSE")
 
 plt.show()

@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 import time
+import matplotlib.pyplot as plt
+import seaborn as sns
+from plotnine import ggplot, aes, geom_bar, geom_line, labs, theme, element_text
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, HistGradientBoostingClassifier
@@ -12,41 +15,40 @@ from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
 
-# Load dataset
-df = pd.read_csv("AIBL.csv")
+def get_clean_data():
+    df = pd.read_csv("AIBL.csv")
+    # Apply any necessary transformations as during training
+    diagnosis_features = ['DXNORM', 'DXMCI', 'DXAD']
+    def create_DXTYPE(DXNORM, DXMCI, DXAD):
+        if DXNORM == 1:
+            return 0
+        elif DXMCI == 1:
+            return 1
+        elif DXAD == 1:
+            return 2
+        else:
+            return -1
 
-# Define diagnosis features
-diagnosis_features = ['DXNORM', 'DXMCI', 'DXAD']
+    # Apply the function to create a target variable 'DXTYPE'
+    df['DXTYPE'] = df.apply(lambda row: create_DXTYPE(row['DXNORM'], row['DXMCI'], row['DXAD']), axis=1)
 
-# Function to create DXTYPE
-def create_DXTYPE(DXNORM, DXMCI, DXAD):
-    if DXNORM == 1:
-        return 0   
-    elif DXMCI == 1:
-        return 1  
-    elif DXAD == 1:
-        return 2  
-    else:
-        return -1  
+    # Calculate age before dropping 'Examyear' and 'PTDOBYear'
+    if 'Examyear' in df.columns and 'PTDOBYear' in df.columns:
+        df["ExamAge"] = df["Examyear"] - df["PTDOBYear"]    
 
-# Create DXPOS before removing other diagnosis features
-df['DXTYPE'] = df.apply(lambda row: create_DXTYPE(row['DXNORM'], row['DXMCI'], row['DXAD']), axis=1)
-
-# Now remove the unnecessary diagnosis features:
-df.drop(diagnosis_features, axis=1, inplace=True)
-
-# Calculate age
-df["ExamAge"] = df["Examyear"] - df["PTDOBYear"]
-
-# Data Preprocessing
-df.dropna(inplace=True)
+    # Columns to drop including the 'APTyear', 'Examyear', 'PTDOBYear', and 'DXCURREN'
+    columns_to_drop = diagnosis_features + ['APTyear', 'Examyear', 'PTDOBYear', 'DXCURREN']
+    df.drop(columns_to_drop, axis=1, inplace=True)
+    
+    return df
+df = get_clean_data()
 
 # Define your updated feature list
 desired_features = ['APGEN1','APGEN2','CDGLOBAL','AXT117','BAT126','HMT3','HMT7' ,
 'HMT13','HMT40','HMT100','HMT102','RCT6','RCT11','RCT20','RCT392', 'MHPSYCH',
 'MH2NEURL','MH4CARD','MH6HEPAT','MH8MUSCL','MH9ENDO',
 'MH10GAST','MH12RENA','MH16SMOK','MH17MALI','MMSCORE','LIMMTOTAL', 
-'LDELTOTAL' ,'PTGENDER',"ExamAge", 'APTyear']
+'LDELTOTAL' ,'PTGENDER',"ExamAge"]
 
 # Extract features and labels
 X = df[desired_features]
@@ -121,3 +123,30 @@ for name, result in results.items():
     print(result['Classification Report'])
     print("=" * 50)
 
+# Assuming you have already computed 'results' as shown in your previous script
+
+# Extract classifier names and their corresponding mean accuracies from the results dictionary
+classifiers = list(results.keys())
+mean_accuracies = [results[classifier]['Mean Accuracy'] for classifier in classifiers]
+
+# Colors for each bar, ensure you have enough colors for each classifier
+colors = ['red', 'blue', 'green', 'purple', 'orange', 'pink', 'brown', 'gray']
+
+# Create a bar chart for mean accuracies
+plt.figure(figsize=(12, 8))
+bars = plt.bar(classifiers, mean_accuracies, color=colors)
+
+# Adding the exact number on top of each bar
+for bar, accuracy in zip(bars, mean_accuracies):
+    yval = bar.get_height()
+    plt.text(bar.get_x() + bar.get_width()/2, yval, f'{accuracy:.3f}', ha='center', va='bottom', fontsize=10)
+
+# Adding titles and labels
+plt.title('Mean Accuracies of Classifiers for Simple Dataset')
+plt.xlabel('Classifiers')
+plt.ylabel('Mean Accuracy')
+plt.xticks(rotation=45)  # Rotate classifier names for readability
+
+# Display the plot
+plt.tight_layout()  # Adjust layout to fit all elements
+plt.show()

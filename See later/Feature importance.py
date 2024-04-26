@@ -2,6 +2,8 @@ from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 import pickle
 import pandas as pd
+import matplotlib.pyplot as plt
+
 
 
 # Load dataset
@@ -55,3 +57,14 @@ normalized_importances = 100 * (raw_importances / raw_importances.sum())
 # Print feature names and their normalized importance percentage
 for feature, importance in zip(desired_features, normalized_importances):
     print(f"Feature: {feature}, Importance: {importance:.2f}%") 
+feature_importances = model.feature_importances_
+
+importance_df = pd.DataFrame({'Feature': desired_features, 'Importance': feature_importances}).sort_values(by='Importance', ascending=False)
+
+# Δημιουργία διαγράμματος
+plt.figure(figsize=(10, 8))
+plt.barh(importance_df['Feature'], importance_df['Importance'], color='skyblue')
+plt.xlabel('Importance')
+plt.title('Feature Importances from Random Forest Model')
+plt.gca().invert_yaxis()  # Αντιστροφή της σειράς για να εμφανίζονται τα σημαντικότερα χαρακτηριστικά πρώτα
+plt.show()
