@@ -225,6 +225,7 @@ def perform_prediction(input_df, model, scaler, encoder, name, nationality):
     st.write("Prediction probabilities:")
     for i, label in enumerate(encoder.classes_):
         st.write(f"{label}: {probabilities[i]:.2f}")
+    st.write( "0: Normal, 1: MCI, 2: Alzheimer's Disease")
 
 
 def main():
