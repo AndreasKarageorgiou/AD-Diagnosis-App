@@ -158,7 +158,6 @@ The app is designed with user-friendliness in mind, ensuring that the questions 
 def display_about_page():
     st.title("About Us")
     st.markdown("---")
-    st.markdown("---")
 
     # Team Section
     col1, col2, = st.columns(2)
@@ -166,7 +165,6 @@ def display_about_page():
         st.header("Meet The Creator")
         st.image("Images/CV photo.jpg", caption="Founder")
         st.subheader("ANDREAS KARAGEORGIOU")
-        st.text("CEO")
         st.write("Student at the Ionian University .")
 
     with col2:
@@ -175,7 +173,6 @@ def display_about_page():
         st.write("The creation of this project was inspired by the personal experiences of the developer, who witnessed a beloved family member struggle with Alzheimer's disease. The journey of seeing their relative's gradual decline, coupled with the challenges in obtaining an early and clear diagnosis, highlighted the need for more accessible diagnostic tools. This personal connection to the issue fueled a passion for making a difference in the lives of those affected by Alzheimer's.")
         st.write("By integrating a scientifically-backed approach with user-friendly technology, the application aspires to empower users with knowledge and actionable insights, thereby fostering earlier interventions that can significantly alter the disease's impact. The hope is that by making these tools widely available, more families can have precious time and better outcomes, potentially slowing the progression of symptoms through timely and tailored interventions.")
     
-    st.markdown("---")
     st.markdown("---")
 
     
@@ -191,7 +188,6 @@ def display_about_page():
     
 
     # Footer or Closing Remark
-    st.markdown("---")
     st.markdown("---")
 
     st.subheader("Thank You for Visiting!")
@@ -303,14 +299,14 @@ def display_questionnaire_page():
         'MH17MALI': yes_no_mapping[st.radio("12.Is the individual at risk for malignancy?", ["No", "Yes"], horizontal=True)],
         'MH6HEPAT': yes_no_mapping[st.radio("13.Are there any abnormalities in the Liver Function Marker?", ["No", "Yes"], horizontal=True)],
         'MH12RENA': yes_no_mapping[st.radio("14.Is the Renal Function within normal limits?", ["No", "Yes"], horizontal=True)],
-        'APGEN1': st.radio("15.APGEN1 value (2-4):",[ "2", "3", "4"], horizontal=True),
-        'APGEN2': st.radio("15.APGEN2 value (2-4):",[ "2", "3", "4"], horizontal=True),
+        'APGEN1': st.radio("15.APGEN1 value :",[ "2", "3", "4"], horizontal=True),
+        'APGEN2': st.radio("15.APGEN2 value ):",[ "2", "3", "4"], horizontal=True),
         'CDGLOBAL': st.slider("17.Cognitive Decline Score (0-3):", min_value=0.0, max_value=3.0, step=0.5 ),
         'MMSCORE': st.slider("18.Mini-Mental State Exam Score (6-30):", min_value=6.0, max_value=30.0, step=0.5),
         'LIMMTOTAL': st.slider("19.Logical Immediate Memory Total (0-23):", min_value=0.0, max_value=23.0, step=0.5),
         'LDELTOTAL': st.slider("20.Logical Delayed Memory Total (0-23):", min_value=0.0, max_value=23.0, step=0.5),
         'AXT117': st.slider("21.Thyroid Stimulating Hormone-Blood Test Result (0-13):", min_value=0.0, max_value=13.0, step=0.1),
-        'BAT126': st.slider("22.Vitamin B12 level (116-2033):", min_value=116, max_value=2034),
+        'BAT126': st.slider("22.Vitamin B12 level (116-2034):", min_value=116, max_value=2034),
         'HMT3': st.slider("23.RBC Count (3-6):", min_value=3.0, max_value=6.0, step=0.01),
         'HMT7': st.slider("24.WBC Count (2-15):", min_value=2.0, max_value=15.0, step=0.01),
         'HMT13': st.slider("25.Platelets Count (16-556):", min_value=16, max_value=556),
@@ -319,7 +315,7 @@ def display_questionnaire_page():
         'HMT102': st.slider("28.MCHC (31-36):", min_value=31.0, max_value=36.0, step=0.1),
         'RCT6': st.slider("29.Urea Nitrogen (16-115):", min_value=16, max_value=116),
         'RCT11': st.slider("30.Serum Glucose (46-235):", min_value=46, max_value=235),
-        'RCT20': st.slider("31.Cholesterol level (92-367):", min_value=92, max_value=368),
+        'RCT20': st.slider("31.Cholesterol level (92-368):", min_value=92, max_value=368),
         'RCT392': st.slider("32.Creatinine (0-2):", min_value=0.0, max_value=2.0, step=0.1),
     }
     input_df = prepare_user_input(input_dict)
